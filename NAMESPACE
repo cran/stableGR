@@ -1,0 +1,12 @@
+export(stable.GR)
+export(target.psrf)
+export(n.eff)
+export(asym.var)
+export(mvn.gibbs)
+
+
+import(mvtnorm, mcmcse)
+importFrom("stats", "cov", "end", "start", "var", "window")
+importFrom("stats", "cov2cor")
+
+

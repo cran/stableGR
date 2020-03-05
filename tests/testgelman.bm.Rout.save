@@ -1,0 +1,95 @@
+
+R version 3.6.2 (2019-12-12) -- "Dark and Stormy Night"
+Copyright (C) 2019 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> set.seed(10)
+> library(mvtnorm)
+> library(mcmcse)
+mcmcse: Monte Carlo Standard Errors for MCMC
+Version 1.4-1 created on 2020-01-29.
+copyright (c) 2012, James M. Flegal, University of California, Riverside
+                    John Hughes, University of Colorado, Denver
+                    Dootika Vats, University of Warwick
+                    Ning Dai, University of Minnesota
+ For citation information, type citation("mcmcse").
+ Type help("mcmcse-package") to get started.
+
+> library(stableGR)
+> 
+> ################ 
+> # Start by making a few chains to work with
+> 
+> # Details on the chain construction
+> p <- 5
+> N <- 10000
+> tail.ind <- floor(N*.80):N
+> foo <- matrix(.50, nrow=p, ncol=p)
+> sigma <- foo^(abs(col(foo)-row(foo)))
+> mu <- sample(10:20, p)
+> mu2 <- mu[p]
+> 
+> # Create the chains
+> mvn.gibbs <- stableGR:::mvn.gibbs
+> out.gibbs1 <- mvn.gibbs(N = N, mu = mu, sigma = sigma, p = p)
+> out.gibbs2 <- mvn.gibbs(N = N, mu = mu, sigma = sigma, p = p)
+> 
+> obj <- list(out.gibbs1, out.gibbs2)
+> ################ 
+> # Perform unit test using the two chains in obj
+> # Just for the first variable
+> 
+> # Write the psrf for the specific obj chains
+> # Isolate the first component of the two chains
+> chain1 <- out.gibbs1[ ,1]
+> chain2 <- out.gibbs2[ ,1]
+> 
+> # Calculate tau^2 
+> stacked <- c(chain1, chain2)
+> tausq <- (mcse(stacked, method = "lug", size = sqrt(N))$se)^2 * 2 * N
+> names(tausq) <- c('se')
+> temp <-matrix(stacked, ncol=1)
+> coffee <- asym.var(temp, multivariate = FALSE, method = "lug", size = sqrt(N))
+> all.equal(coffee, tausq)
+[1] TRUE
+> 
+> # Calulate s^2 for each chain
+> sampvar1 <- var(chain1)
+> sampvar2 <- var(chain2)
+> ssquared <- .5 * (sampvar1 + sampvar2)
+> 
+> # Calculate sigma^2 estimate
+> sigsq <- ((N-1) * ssquared + tausq)/N
+> 
+> 
+> 
+> # Calculate the diagnostic
+> Rhat <- sigsq / ssquared
+> 
+> that <- sqrt(Rhat)
+> names(that) <- NULL
+> 
+> 
+> 
+> withfunc <- stable.GR(obj, method = "lug", size = "sqroot")
+> all.equal(as.numeric(withfunc$psrf[1]), that)
+[1] TRUE
+> 
+> 
+> 
+> 
+> proc.time()
+   user  system elapsed 
+  8.334   0.028   8.351 
